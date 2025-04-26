@@ -31,8 +31,10 @@ const (
 
 	// Direct Rendering Manager sysfs location
 	DRMDeviceDirGlob   = "/sys/class/drm/card*/device"
-	DRMTotalMemoryFile = "mem_info_vram_total"
-	DRMUsedMemoryFile  = "mem_info_vram_used"
+	DRMTotalVRAMMemoryFile = "mem_info_vram_total"
+	DRMUsedVRAMMemoryFile  = "mem_info_vram_used"
+	DRMTotalGTTMemoryFile = "mem_info_gtt_total"
+	DRMUsedGTTMemoryFile  = "mem_info_gtt_used"
 
 	// In hex; properties file is in decimal
 	DRMUniqueIDFile = "unique_id"
@@ -234,6 +236,18 @@ func AMDGetGPUInfo() ([]RocmGPUInfo, error) {
 			}
 			if !matched {
 				continue
+			}
+
+			// USE THIS ENV :GGML_CUDA_ENABLE_UNIFIED_MEMORY=1  to load GTT mem instead of VRAM
+			var (
+				DRMTotalMemoryFile = DRMTotalVRAMMemoryFile
+				DRMUsedMemoryFile = DRMUsedVRAMMemoryFile
+			)
+			// If the user has set the unified memory flag, use the GTT memory instead of VRAM
+			if os.Getenv("GGML_CUDA_ENABLE_UNIFIED_MEMORY") != "" {
+				slog.Info("using GTT memory instead of VRAM", "gpu", gpuID)
+				DRMTotalMemoryFile = DRMTotalGTTMemoryFile
+				DRMUsedMemoryFile = DRMUsedGTTMemoryFile
 			}
 
 			// Found the matching DRM directory
